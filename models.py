@@ -41,6 +41,7 @@ class InternCreate(InternBase):
 
 class InternResponse(InternBase):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+    priyanshi:  str = "Priyanshi"
     
     class Config:
         validate_by_name = True
