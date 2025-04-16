@@ -1,18 +1,36 @@
-from fastapi import FastAPI
-import uvicorn
-import pymongo
-import datetime
-from routes import interns, attendance, tasks
+import os
+import tempfile
+import pandas as pd
+import sys
+import shutil
 
-app = FastAPI()
+def sort_large_file(input_file, output_file, memory_limit_gb = 12):
+    chunk_files = []
+    temp_dir = tempfile.mkdtemp()
 
-app.include_router(interns.router, prefix="/api/interns", tags=["Interns"])
-app.include_router(attendance.router, prefix="/api/attendance", tags=["Attendance"])
-app.include_router(tasks.router, prefix="/api/tasks", tags=["Tasks"])
+    chunksize = int((memory_limit_gb * 1024 * 1024 * 1024) /5)
+    chunk_count = 0
+    for chunk in pd.read_csv(input_file, header= None, chunksize=chunksize, names=['name']):
+        chunk_count += 1
 
-@app.get("/")
-def root():
-    return {"message": "welcome to Intern Management System"}
+        chunk_sorted = chunk.sort_values('name')
+
+        chunk_file = os.path.join(temp_dir,f"chunk_{chunk_count}.csv")
+        chunk_sorted.to_csv(chunk_file, index = False, header = False)
+        chunk_files.append(chunk_file)
+
+    sorted_chunks = (pd.read_csv(f, header=None, names=['name']) for f in chunk_files)
+    pd.concat(sorted_chunks).sort_values('name').to_csv(output_file, index=False, header=False)
+
+    shutil.rmtree(temp_dir)
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
+    if len(sys.argv) < 3:
+        print("Sorting The Names")
+        sys.exit(1)
+
+    input_file = sys.argv[1]
+    output_file = sys.argv[2]
+    memory_limit_gb = int(sys.argv[3]) if len(sys.argv) > 3 else 12
+    sort_large_file(input_file, output_file, memory_limit_gb)
+    print(f"The sorted file is saved to {output_file}")
