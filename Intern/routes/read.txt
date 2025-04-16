@@ -1,2 +1,0 @@
-for interns = PUT /tasks/{task_id}?role=intern&user_id={intern_id}
-for admin = POST /tasks/?role=admins
